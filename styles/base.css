@@ -1,119 +1,13 @@
-* { box-sizing: border-box; }
-
-html {
-  scrollbar-gutter: stable;
-  overflow-x: clip;
-}
-
-@media (max-width: 720px) {
-  html {
-    scrollbar-gutter: auto;
-  }
-}
-
-body {
-  min-height: 100%;
-  overflow-x: clip;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-text);
-  font-size: var(--fs-body);
-  line-height: 1.5;
-  background: var(--paper);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-img {
-  display: block;
-  max-width: 100%;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-.mono {
-  font-family: var(--font-text);
-  font-size: var(--fs-label);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.label {
-  color: var(--ink-3);
-  font-family: var(--font-text);
-  font-size: var(--fs-label);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.small {
-  font-size: var(--fs-small);
-}
-
-.muted {
-  color: var(--ink-2);
-}
-
-.hidden {
-  display: none !important;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
-::selection {
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--paper);
-}
-
-kbd {
-  font-family: var(--font-text);
-  font-size: var(--fs-label);
-  letter-spacing: 0.04em;
-  border: 1px solid var(--rule);
-  border-bottom-width: 2px;
-  background: var(--paper-2);
-  padding: 2px 6px;
-}
+*,*::before,*::after{box-sizing:border-box}
+html{min-height:100%;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--beige-300) var(--surface-2)}
+body{min-height:100vh;margin:0;overflow-x:hidden;background:var(--bg);color:var(--text);font:400 var(--fs-md)/1.5 var(--font-ui);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:var(--z-glow);background:radial-gradient(ellipse 38rem 34rem at 12% 8%,rgba(248,201,122,.18),transparent 72%),radial-gradient(ellipse 35rem 32rem at 92% 95%,rgba(244,231,197,.52),transparent 72%)}
+img,svg{display:block}img{max-width:100%}button,input{font:inherit}button{color:inherit}h1,h2,h3,h4,p{margin:0}h1,h2,h3,h4{font-family:var(--font-display);font-weight:600;line-height:1.1}button{border:0;background:none;cursor:pointer}button:disabled{cursor:wait}a{color:inherit}:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+::selection{background:var(--gold-300);color:var(--ink-900)}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--surface-2)}::-webkit-scrollbar-thumb{background:var(--beige-300);border:2px solid var(--surface-2);border-radius:var(--r-pill)}
+input[type=range]{appearance:none;width:100%;height:5px;border-radius:var(--r-pill);background:linear-gradient(to right,var(--gold-500) 0%,var(--gold-500) var(--fill,50%),var(--line) var(--fill,50%),var(--line) 100%);cursor:pointer}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold-700);border:2px solid var(--paper);box-shadow:var(--shadow-1)}input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--gold-700);border:2px solid var(--paper);box-shadow:var(--shadow-1)}
+#media-hosts{position:fixed;left:-9999px;top:0;width:200px;height:200px;opacity:0;pointer-events:none;overflow:hidden}#ytHost,#spotifyHost{width:200px;height:200px}
+.noscript{margin:2rem;padding:1rem;text-align:center;color:var(--text-2)}
+.tabular-nums{font-variant-numeric:tabular-nums}.mono-label{font:400 11px/1.2 var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
