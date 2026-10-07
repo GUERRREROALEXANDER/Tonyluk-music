@@ -15,7 +15,7 @@ let db: IDBDatabase | null = null;
 function openDb(): Promise<IDBDatabase> {
   return new Promise((res, rej) => {
     if (db) { res(db); return; }
-    const req = indexedDB.open("linkedBeats", 1);
+    const req = indexedDB.open("tonyLukMusic", 1);
     req.onupgradeneeded = () => { const d = req.result; if (!d.objectStoreNames.contains("blobs")) d.createObjectStore("blobs"); };
     req.onsuccess = () => { db = req.result; res(db); };
     req.onerror = () => rej(req.error);

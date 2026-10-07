@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { parsePipedItems, parseYtApiItems, parseIsoDuration, cleanYoutubeTitle, PIPED_HOSTS } from "../dist/ytsearch.js";
+import { parsePipedItems, parseYtApiItems, parseIsoDuration, cleanYoutubeTitle, PIPED_HOSTS } from "../dist/services/youtube.js";
 
 describe("ytsearch pure", () => {
   it("parseIsoDuration PT3M20S", () => assert.equal(parseIsoDuration("PT3M20S"), 200));

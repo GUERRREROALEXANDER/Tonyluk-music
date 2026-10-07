@@ -1,4 +1,5 @@
 // Pure helpers for iTunes Search API, no DOM.
+import type { Song } from "../core/song.js";
 export type Chip = "all" | "artist" | "song";
 
 export interface SearchResult {
@@ -96,4 +97,38 @@ export class SearchCache {
   clear(): void {
     this.map.clear();
   }
+}
+
+const searchCache = new SearchCache();
+
+export async function searchItunes(
+  term: string,
+  chip: Chip,
+  signal?: AbortSignal,
+  fetchFn: typeof fetch = fetch,
+): Promise<SearchResult[]> {
+  const key = cacheKey(term, chip);
+  const cached = searchCache.get(key);
+  if (cached) return cached;
+  if (term.trim().length < 2) return [];
+  const response = await fetchFn(buildSearchUrl(term, chip), { signal });
+  if (!response.ok) throw new Error(`iTunes search failed (${response.status})`);
+  const results = parseResults(await response.json() as unknown);
+  searchCache.set(key, results);
+  return results;
+}
+
+export function songFromItunes(result: SearchResult): Song {
+  return {
+    id: `itunes:${result.remoteId}`,
+    title: result.title,
+    artist: result.artist,
+    album: result.album,
+    url: result.previewUrl,
+    artworkUrl: result.artworkUrl,
+    duration: 30,
+    trackTimeMillis: result.trackTimeMillis,
+    remoteId: result.remoteId,
+    source: "itunes",
+  };
 }

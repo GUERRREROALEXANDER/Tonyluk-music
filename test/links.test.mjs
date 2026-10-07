@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { classifyUrl } from "../dist/links.js";
+import { classifyUrl } from "../dist/services/links.js";
 
 describe("classifyUrl", () => {
   it("youtube watch", () => assert.equal(classifyUrl("https://www.youtube.com/watch?v=abc123").kind,"youtube"));

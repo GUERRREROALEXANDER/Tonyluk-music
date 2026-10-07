@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { buildSearchUrl, parseResults, SearchCache, cacheKey } from "../dist/search.js";
+import { buildSearchUrl, parseResults, SearchCache, cacheKey } from "../dist/services/itunes.js";
 
 // Helper to create fake localStorage
 function makeStorage() {

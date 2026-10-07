@@ -1,10 +1,11 @@
-import type { Song } from "./core/song.js";
+import type { Song } from "../core/song.js";
 
-export type EngineKind = "audio" | "youtube";
+export type EngineKind = "audio" | "youtube" | "spotify";
 export type EngineEvent = "time" | "ended" | "error" | "ready" | "state";
 
 export interface PlaybackEngine {
   readonly kind: EngineKind;
+  readonly supportsVolume: boolean;
   load(song: Song): Promise<void>;
   play(): Promise<void>;
   pause(): void;
@@ -35,6 +36,7 @@ export function shouldSkipOnError(code: number): boolean { return [2,5,100,101,1
 
 export class AudioEngine implements PlaybackEngine {
   readonly kind: EngineKind = "audio";
+  readonly supportsVolume = true;
   private el: HTMLAudioElement;
   private cbs: Map<EngineEvent, Set<(d?: unknown)=>void>> = new Map();
   private noCorsMode = false;
@@ -103,8 +105,9 @@ function loadYtApi(): Promise<void> {
 
 export class YouTubeEngine implements PlaybackEngine {
   readonly kind: EngineKind = "youtube";
+  readonly supportsVolume = true;
   private player: unknown = null;
-  private containerId = "ytPlayer";
+  private containerId: string;
   private cbs: Map<EngineEvent, Set<(d?: unknown)=>void>> = new Map();
   private pollTimer: number | null = null;
   private _currentTime = 0;
@@ -118,6 +121,10 @@ export class YouTubeEngine implements PlaybackEngine {
   private lastTime = -1;
   private idleTicks = 0;
   private destroyedFlag = false;
+
+  constructor(hostElementId = "ytHost") { this.containerId = hostElementId; }
+
+  preload(): Promise<void> { return loadYtApi(); }
 
   async load(song: Song): Promise<void> {
     const vid = song.videoId ?? extractVideoId(song.url) ?? "";
@@ -139,12 +146,7 @@ export class YouTubeEngine implements PlaybackEngine {
         return;
       } catch {}
     }
-    let el = document.getElementById(this.containerId);
-    if (!el) {
-      el = document.createElement("div"); el.id = this.containerId;
-    }
-    const host = document.getElementById("ytHost") ?? document.getElementById(this.containerId);
-    const hostId = host ? host.id : this.containerId;
+    const hostId = this.containerId;
     return new Promise((res, rej) => {
       try {
         const YT = window.YT!;
@@ -269,4 +271,105 @@ export class YouTubeEngine implements PlaybackEngine {
 
 function extractVideoId(url: string): string | null {
   try { const u = new URL(url); const v = u.searchParams.get("v"); if (v) return v; const parts = u.pathname.split("/").filter(Boolean); if (parts.length) return parts[parts.length - 1] ?? null; } catch { return null; } return null;
+}
+
+interface SpotifyPlaybackUpdate {
+  position: number; duration: number; isPaused: boolean; isBuffering: boolean;
+}
+interface SpotifyEmbedController {
+  loadUri(uri: string): void; play(): void; pause(): void; resume(): void;
+  seek(seconds: number): void; togglePlay(): void;
+  addListener(event: "playback_update", listener: (event: { data: SpotifyPlaybackUpdate }) => void): void;
+}
+interface SpotifyIframeApi {
+  createController(element: HTMLElement, options: { uri: string; width: string; height: number }, callback: (controller: SpotifyEmbedController) => void): void;
+}
+declare global {
+  interface Window {
+    SpotifyIframeApi?: SpotifyIframeApi;
+    onSpotifyIframeApiReady?: (api: SpotifyIframeApi) => void;
+  }
+}
+
+let spotifyApiPromise: Promise<SpotifyIframeApi> | null = null;
+function loadSpotifyApi(): Promise<SpotifyIframeApi> {
+  if (window.SpotifyIframeApi) return Promise.resolve(window.SpotifyIframeApi);
+  if (!spotifyApiPromise) {
+    spotifyApiPromise = new Promise((resolve, reject) => {
+      const previous = window.onSpotifyIframeApiReady;
+      window.onSpotifyIframeApiReady = (api) => { previous?.(api); resolve(api); };
+      const script = document.createElement("script");
+      script.src = "https://open.spotify.com/embed/iframe-api/v1"; script.async = true;
+      script.onerror = () => reject(new Error("Spotify embed API failed to load"));
+      document.head.appendChild(script);
+      setTimeout(() => reject(new Error("Spotify embed API timed out")), 10000);
+    });
+  }
+  return spotifyApiPromise;
+}
+
+export class SpotifyEngine implements PlaybackEngine {
+  readonly kind: EngineKind = "spotify";
+  readonly supportsVolume = false;
+  private callbacks = new Map<EngineEvent, Set<(data?: unknown) => void>>();
+  private controller: SpotifyEmbedController | null = null;
+  private currentUri = "";
+  private _currentTime = 0;
+  private _duration = 0;
+  private _paused = true;
+  private played = false;
+  private endedEmitted = false;
+
+  constructor(private readonly host: HTMLElement) {}
+
+  async load(song: Song): Promise<void> {
+    const uri = song.spotifyUri ?? song.url.match(/\/track\/([A-Za-z0-9]+)/)?.[1]?.replace(/^/, "spotify:track:") ?? "";
+    if (!uri.startsWith("spotify:track:")) throw new Error("no Spotify track URI");
+    this.currentUri = uri; this.endedEmitted = false; this.played = false;
+    if (this.controller) { this.controller.loadUri(uri); this.emit("ready"); return; }
+    const api = await loadSpotifyApi();
+    await new Promise<void>((resolve) => {
+      api.createController(this.host, { uri, width: "100%", height: 152 }, (controller) => {
+        this.controller = controller;
+        controller.addListener("playback_update", ({ data }) => this.handleUpdate(data));
+        resolve();
+      });
+    });
+    this.emit("ready");
+  }
+
+  private handleUpdate(update: SpotifyPlaybackUpdate): void {
+    this._currentTime = Math.max(0, update.position / 1000);
+    this._duration = Math.max(0, update.duration / 1000);
+    this.emit("time", this._currentTime);
+    const state = update.isBuffering ? "buffering" : update.isPaused ? "paused" : "playing";
+    this._paused = update.isPaused;
+    if (!update.isPaused && !update.isBuffering) this.played = true;
+    this.emit("state", state);
+    if (this.played && this._duration > 0 && update.position >= update.duration - 400 && !this.endedEmitted) {
+      this.endedEmitted = true; this.emit("ended");
+    }
+  }
+
+  /** play() restarts the track in the Spotify embed, so after the first start we resume instead. */
+  async play(): Promise<void> {
+    if (this.played) this.controller?.resume(); else this.controller?.play();
+    this._paused = false;
+  }
+  pause(): void { this.controller?.pause(); this._paused = true; }
+  resume(): void { this.controller?.resume(); this._paused = false; }
+  togglePlay(): void { this.controller?.togglePlay(); }
+  seek(seconds: number): void { this._currentTime = Math.max(0, seconds); this.controller?.seek(this._currentTime); }
+  setVolume(_v01: number): void { /* The Spotify embed does not expose volume control. */ }
+  setMuted(_muted: boolean): void { /* The Spotify embed does not expose mute control. */ }
+  setRate(_rate: number): void { /* The Spotify embed does not expose playback rate. */ }
+  get currentTime(): number { return this._currentTime; }
+  get duration(): number { return this._duration; }
+  get paused(): boolean { return this._paused; }
+  on(event: EngineEvent, callback: (data?: unknown) => void): void {
+    if (!this.callbacks.has(event)) this.callbacks.set(event, new Set());
+    this.callbacks.get(event)?.add(callback);
+  }
+  destroy(): void { this.callbacks.clear(); this.controller = null; }
+  private emit(event: EngineEvent, data?: unknown): void { for (const callback of this.callbacks.get(event) ?? []) callback(data); }
 }

@@ -1,7 +1,8 @@
 import { cpSync, mkdirSync, rmSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = join(dirname(new URL(import.meta.url).pathname), "..");
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const site = join(root, "site");
 
 function clean() {
@@ -45,6 +46,9 @@ copyDirFiltered(join(root, "dist"), join(site, "dist"), (p, ent) => {
   if (p.endsWith(".map")) return false;
   return p.endsWith(".js");
 });
+
+// assets/
+copyDirFiltered(join(root, "assets"), join(site, "assets"));
 
 console.log("pack: site ready");
 if (existsSync(site)) {

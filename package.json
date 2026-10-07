@@ -7,7 +7,8 @@
     "build": "tsc",
     "build:site": "tsc && node scripts/pack.mjs",
     "test": "tsc && node --test --test-concurrency=1 test/",
-    "serve": "python3 -m http.server 8000"
+    "dev": "tsc && node server/dev.mjs",
+    "serve": "node server/dev.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.1.0",

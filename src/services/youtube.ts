@@ -204,3 +204,40 @@ export async function searchYouTubePiped(
   void lastErr;
   return [];
 }
+
+export async function searchYouTube(query: string, signal?: AbortSignal): Promise<YtResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  try {
+    const response = await fetch(`${apiBase()}/api/youtube-search?q=${encodeURIComponent(trimmed)}`, { signal });
+    if (response.status === 501 || response.status === 404) return searchYouTubePiped(trimmed);
+    if (!response.ok) throw new Error(`YouTube search failed (${response.status})`);
+    const payload = await response.json() as { items?: unknown };
+    if (!Array.isArray(payload.items)) return [];
+    return payload.items.filter((item): item is YtResult => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Record<string, unknown>;
+      return typeof row.videoId === "string" && typeof row.title === "string" &&
+        typeof row.cleanedTitle === "string" && typeof row.channel === "string" &&
+        typeof row.duration === "number" && typeof row.thumbnail === "string";
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return searchYouTubePiped(trimmed);
+  }
+}
+
+export function songFromYouTube(result: YtResult): Song {
+  return {
+    id: `youtube:${result.videoId}`,
+    title: result.cleanedTitle || result.title,
+    artist: result.channel,
+    url: `https://www.youtube.com/watch?v=${encodeURIComponent(result.videoId)}`,
+    videoId: result.videoId,
+    artworkUrl: `https://i.ytimg.com/vi/${encodeURIComponent(result.videoId)}/hqdefault.jpg`,
+    duration: result.duration,
+    source: "youtube",
+  };
+}
+import type { Song } from "../core/song.js";
+import { apiBase } from "./config.js";

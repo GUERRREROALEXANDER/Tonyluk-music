@@ -3,6 +3,7 @@ dist
 site
 *.log
 .vercel
+.env
 # local working material, not part of the project
 inspo/
 inspo.txt

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { parseLicense, pickAudioFile, buildArchiveSearchUrl, buildAttribution } from "../dist/archive.js";
+import { parseLicense, pickAudioFile, buildArchiveSearchUrl, buildAttribution } from "../dist/services/archive.js";
 
 describe("archive", () => {
   it("parseLicense by", () => assert.equal(parseLicense("https://creativecommons.org/licenses/by/4.0/"), "CC BY"));
