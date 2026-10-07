@@ -4,10 +4,10 @@ import { h, icon } from "../dom.js";
 import { ACTIONS, store } from "../store.js";
 import { toast } from "../toast.js";
 
-export function openOpsSheet(mode: "first" | "last" | "insert" = "last", at = 0): void {
+export function openOpsSheet(mode: "first" | "last" | "insert" = "last", at = 0, preset?: Song): void {
   const app = store; if (!app) return;
   const list = app.library.getActiveList(); if (!list) return;
-  let position = Math.max(0, Math.min(at, list.size)); let selected: Song | null = null; let selectedSongs: Song[] = []; let timer: ReturnType<typeof setTimeout> | undefined;
+  let position = Math.max(0, Math.min(at, list.size)); let selected: Song | null = preset ?? null; let selectedSongs: Song[] = preset ? [preset] : []; let timer: ReturnType<typeof setTimeout> | undefined;
   const overlay = h("div", { class: "ops-overlay", onClick: (event: Event) => { if (event.target === overlay) close(); } });
   const dialog = h("section", { class: "ops-sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "ops-title", tabindex: "-1" });
   const title = mode === "first" ? "Add to the beginning" : mode === "insert" ? "Insert at position" : "Add to the end";
@@ -18,7 +18,7 @@ export function openOpsSheet(mode: "first" | "last" | "insert" = "last", at = 0)
   const updatePosition = (): void => { positionText.textContent = `Position ${position + 1} of ${list.size + 1}`; const before = position > 0 ? list.nodeAt(position - 1)?.value.title ?? "" : "null"; const after = position < list.size ? list.nodeAt(position)?.value.title ?? "" : "null"; preview.replaceChildren(h("span", {}, before || "null"), h("b", {}, "← prev"), h("strong", {}, selected?.title ?? "New song"), h("b", {}, "next →"), h("span", {}, after || "null")); };
   const minus = h("button", { type: "button", "aria-label": "Move position earlier", onClick: () => { position = Math.max(0, position - 1); updatePosition(); refreshConfirm(); } }, "−");
   const plus = h("button", { type: "button", "aria-label": "Move position later", onClick: () => { position = Math.min(list.size, position + 1); updatePosition(); refreshConfirm(); } }, "+"); stepper.append(minus, positionText, plus); updatePosition();
-  const confirm = h("button", { type: "button", class: "gold-button", disabled: true }, "Choose a song"); const closeButton = h("button", { type: "button", class: "icon-button", "aria-label": "Close", onClick: close }, icon("close"));
+  const confirm = h("button", { type: "button", class: "gold-button", disabled: !preset }, preset ? `Insert at position ${position + 1}` : "Choose a song"); const closeButton = h("button", { type: "button", class: "icon-button", "aria-label": "Close", onClick: close }, icon("close"));
   dialog.append(h("div", { class: "ops-heading" }, heading, closeButton), tabs, stepper, preview, query, status, results, confirm); overlay.append(dialog); document.body.append(overlay);
   dialog.focus(); const prior = document.activeElement;
   function close(): void { overlay.remove(); if (prior instanceof HTMLElement) prior.focus(); if (timer) clearTimeout(timer); }

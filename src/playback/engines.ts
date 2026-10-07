@@ -329,7 +329,7 @@ export class SpotifyEngine implements PlaybackEngine {
     if (this.controller) { this.controller.loadUri(uri); this.emit("ready"); return; }
     const api = await loadSpotifyApi();
     await new Promise<void>((resolve) => {
-      api.createController(this.host, { uri, width: "100%", height: 152 }, (controller) => {
+      api.createController(this.host, { uri, width: "100%", height: 80 }, (controller) => {
         this.controller = controller;
         controller.addListener("playback_update", ({ data }) => this.handleUpdate(data));
         resolve();

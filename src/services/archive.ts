@@ -13,6 +13,7 @@ export function parseLicense(licenseUrl: string | undefined | null): string {
 }
 
 export interface ArchiveFile { name: string; format: string; length?: string; size?: string }
+export interface ArchiveTrack { identifier: string; title?: string; creator?: string }
 
 export function pickAudioFile(files: ArchiveFile[] | undefined | null): ArchiveFile | null {
   if (!files || !Array.isArray(files) || files.length === 0) return null;
@@ -45,6 +46,24 @@ export function buildArchiveSearchUrl(term: string): string {
   params.set("rows", "20");
   params.set("output", "json");
   return `${base}?${params.toString()}`;
+}
+
+export async function searchArchive(term: string, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<ArchiveTrack[]> {
+  const response = await fetchFn(buildArchiveSearchUrl(term), { signal });
+  if (!response.ok) throw new Error(`Free music search failed (${response.status})`);
+  const payload = await response.json() as { response?: { docs?: unknown } };
+  if (!Array.isArray(payload.response?.docs)) return [];
+  return payload.response.docs.filter((item): item is ArchiveTrack => !!item && typeof item === "object" && typeof (item as ArchiveTrack).identifier === "string");
+}
+
+export async function resolveArchiveAudio(identifier: string, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<{ url: string; duration: number }> {
+  const response = await fetchFn(`https://archive.org/metadata/${encodeURIComponent(identifier)}`, { signal });
+  if (!response.ok) throw new Error(`Could not read Internet Archive files (${response.status})`);
+  const payload = await response.json() as { files?: ArchiveFile[] };
+  const file = pickAudioFile(payload.files);
+  if (!file) throw new Error("No playable audio file was found.");
+  const length = Number(file.length ?? 0);
+  return { url: `https://archive.org/download/${encodeURIComponent(identifier)}/${encodeURIComponent(file.name)}`, duration: Number.isFinite(length) ? length : 0 };
 }
 
 export function downloadAllowedForArchive(_song: unknown): boolean { return true; }

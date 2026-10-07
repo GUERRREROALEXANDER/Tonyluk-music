@@ -1,3 +1,4 @@
+import { autoReveal } from "./ui/motion.js";
 import { AuthService } from "./services/auth.js";
 import type { AuthUser } from "./services/auth.js";
 import { searchItunes, songFromItunes } from "./services/itunes.js";
@@ -41,3 +42,4 @@ window.addEventListener("tlm:error", event => { const detail = (event as CustomE
 const syncRangeFill = (input: HTMLInputElement): void => { const min = Number(input.min || 0), max = Number(input.max || 100); input.style.setProperty("--fill", `${max > min ? (Number(input.value) - min) / (max - min) * 100 : 0}%`); };
 document.addEventListener("input", (event) => { const target = event.target; if (target instanceof HTMLInputElement && target.type === "range") syncRangeFill(target); });
 new MutationObserver(() => document.querySelectorAll<HTMLInputElement>('input[type="range"]:not([data-filled])').forEach((input) => { input.dataset.filled = ""; syncRangeFill(input); })).observe(document.body, { childList: true, subtree: true });
+autoReveal();

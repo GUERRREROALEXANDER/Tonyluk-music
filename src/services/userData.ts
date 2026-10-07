@@ -76,10 +76,13 @@ export class UserData {
   isFavorite(id: string): boolean { return this.readMap<Song>("favoriteSongs").has(id); }
 
   pushRecent(song: Song): void {
+    const plays = Number(this.storage.getItem(this.key("plays")) ?? 0);
+    this.storage.setItem(this.key("plays"), String((Number.isFinite(plays) ? plays : 0) + 1));
     const list = this.readArray<Song>("recent").filter((item) => item.id !== song.id);
     list.unshift(song); this.storage.setItem(this.key("recent"), JSON.stringify(list.slice(0, 30)));
   }
   getRecent(): Song[] { return this.readArray<Song>("recent").slice(0, 30); }
+  getPlaysCount(): number { const count = Number(this.storage.getItem(this.key("plays")) ?? 0); return Number.isFinite(count) && count > 0 ? count : 0; }
 
   getPrefs(): UserPreferences {
     try {

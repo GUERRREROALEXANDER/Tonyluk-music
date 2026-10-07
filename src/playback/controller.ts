@@ -70,6 +70,8 @@ export class PlaybackController {
     const loadToken = ++this.token;
     if (changedEngine) this.activeEngine.pause();
     this.activeEngine = engine;
+    // The page styles react to the active engine (the Spotify embed must be visible to play).
+    if (typeof document !== "undefined") document.documentElement.dataset.engine = engine.kind;
     if (changedEngine) { engine.setVolume(this.volume); engine.setMuted(this.muted); }
     this.emit("track", node); this.emit("state", "loading");
     try {

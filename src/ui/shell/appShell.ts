@@ -2,22 +2,32 @@ import { h } from "../dom.js";
 import { onRoute, navigate } from "../router.js";
 import { mountPlaylistView } from "../views/playlistView.js";
 import { mountLibraryView } from "../views/libraryView.js";
+import { mountHomeView } from "../views/homeView.js";
+import { mountSearchView } from "../views/searchView.js";
+import { mountSongListView } from "../views/songListView.js";
+import { mountProfileView } from "../views/profileView.js";
 import { mountTopbar } from "./topbar.js";
 import { mountPlayerDock } from "./playerDock.js";
 import { mountNowPlaying } from "./nowPlaying.js";
-import { on, store } from "../store.js";
-import { searchItunes, songFromItunes } from "../../services/itunes.js";
-import { h as el, icon } from "../dom.js";
-import { ACTIONS } from "../store.js";
-
-function mountSearch(root: HTMLElement): void { const input = el("input", { type: "search", placeholder: "What do you want to hear?", "aria-label": "Search music" }); const results = el("div", { class: "search-results" }); let timer: ReturnType<typeof setTimeout> | undefined; input.addEventListener("input", () => { if (timer) clearTimeout(timer); const term = input.value.trim(); timer = setTimeout(() => { if (term.length < 2) return; results.replaceChildren(el("p", {}, "Searching the iTunes catalog…")); void searchItunes(term, "all").then(items => { results.replaceChildren(); if (!items.length) results.append(el("p", {}, "No songs found. Try another search.")); items.slice(0, 12).forEach(item => { const song = songFromItunes(item); const addFirst = el("button", { type: "button", "aria-label": `Add ${song.title} first`, onClick: () => ACTIONS.addFirst(song) }, icon("plus", 18), " Add first"); const addLast = el("button", { type: "button", onClick: () => ACTIONS.addLast(song) }, "Add last"); const row = el("article", { class: "search-result" }, el("img", { src: song.artworkUrl, alt: "", width: 58, height: 58 }), el("span", {}, el("strong", {}, song.title), el("small", {}, `${song.artist} · ${song.album}`)), el("button", { type: "button", "aria-label": `Play ${song.title}`, onClick: () => { const node = ACTIONS.addLast(song); void ACTIONS.playNode(node); } }, icon("play", 18)), addFirst, addLast); results.append(row); }); }).catch(() => { results.replaceChildren(el("p", {}, "Search is unavailable. Please try again.")); }); }, 300); }); root.replaceChildren(el("section", { class: "search-page" }, el("span", { class: "eyebrow mono-label" }, "DISCOVER MUSIC"), el("h1", {}, "Find your next favorite"), input, results)); }
+import { store, ACTIONS } from "../store.js";
+import { applyMotionPref } from "../motion.js";
 
 export function mountAppShell(root: HTMLElement, onSignOut: () => void): void {
-  const outlet = h("main", { class: "app-outlet", id: "route-outlet", tabindex: "-1" }); const mobile = h("nav", { class: "mobile-tabs", "aria-label": "Main navigation" }); const mobileRoutes: Array<[string, string]> = [["Home", "home"], ["Search", "search"], ["Library", "library"], ["Favorites", "favorites"]]; mobileRoutes.forEach(([label, route]) => mobile.append(h("button", { type: "button", onClick: () => navigate(route) }, label)));
+  applyMotionPref(store!.data.getPrefs().reducedMotion);
+  const outlet = h("main", { class: "app-outlet", id: "route-outlet", tabindex: "-1" });
+  const mobile = h("nav", { class: "mobile-tabs", "aria-label": "Main navigation" });
+  const mobileRoutes: Array<[string, string]> = [["Home", "home"], ["Search", "search"], ["Library", "library"], ["Favorites", "favorites"]];
+  for (const [label, route] of mobileRoutes) mobile.append(h("button", { type: "button", onClick: () => navigate(route) }, label));
   let open = store!.data.getPrefs().lyricsOpen; let shell: HTMLElement;
   const toggleNowPlaying = (): void => { open = !open; shell.classList.toggle("now-open", open); store!.data.setPrefs({ lyricsOpen: open }); };
-  const now = mountNowPlaying(toggleNowPlaying); const dock = mountPlayerDock(toggleNowPlaying); const topbar = mountTopbar(onSignOut);
-  shell = h("div", { class: `app-shell ${open ? "now-open" : ""}` }, topbar, outlet, now, dock, mobile); root.replaceChildren(shell);
-  const render = (route: string, parameter?: string): void => { if (route === "playlist" && parameter) { if (store!.library.getNames().includes(parameter) && store!.library.getActiveName() !== parameter) ACTIONS.openPlaylist(parameter); mountPlaylistView(outlet); } else if (route === "library") mountLibraryView(outlet); else if (route === "search") mountSearch(outlet); else if (route === "favorites" || route === "recent") { const songs = route === "favorites" ? store!.data.getFavorites() : store!.data.getRecent(); outlet.replaceChildren(h("section", { class: "simple-list" }, h("h1", {}, route === "favorites" ? "Favorites" : "Recently played"), ...songs.map(song => h("button", { type: "button", onClick: () => { let node = store!.library.getActiveList()!.head; while (node && node.value.id !== song.id) node = node.next; if (node) void ACTIONS.playNode(node); } }, h("img", { src: song.artworkUrl || "assets/brand/app-icon.png", alt: "", width: 48, height: 48 }), h("span", {}, song.title))))); } else if (route === "profile") outlet.replaceChildren(h("section", { class: "simple-list" }, h("h1", {}, "Profile"), h("p", {}, store!.user.name), h("p", {}, store!.user.email))); else { outlet.replaceChildren(h("section", { class: "home-view" }, h("span", { class: "eyebrow mono-label" }, "GOLDEN HOUR"), h("h1", {}, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, ${store!.user.name}`), h("p", {}, "Music that walks beside you."), h("div", { class: "home-actions" }, h("button", { type: "button", class: "gold-button", onClick: () => navigate(`playlist/${encodeURIComponent(store!.library.getActiveName() ?? "My Playlist")}`) }, "Open your playlist"), h("button", { type: "button", onClick: () => navigate("search") }, "Discover music")))); } };
-  onRoute(render);
+  shell = h("div", { class: `app-shell ${open ? "now-open" : ""}` }, mountTopbar(onSignOut), outlet, mountNowPlaying(toggleNowPlaying), mountPlayerDock(toggleNowPlaying), mobile); root.replaceChildren(shell);
+  onRoute((route, parameter) => {
+    store!.view = route;
+    if (route === "playlist" && parameter) { if (store!.library.getNames().includes(parameter) && store!.library.getActiveName() !== parameter) ACTIONS.openPlaylist(parameter); mountPlaylistView(outlet); }
+    else if (route === "library") mountLibraryView(outlet);
+    else if (route === "search") mountSearchView(outlet);
+    else if (route === "favorites" || route === "recent") mountSongListView(outlet, route);
+    else if (route === "profile") mountProfileView(outlet, onSignOut);
+    else mountHomeView(outlet);
+  });
 }
