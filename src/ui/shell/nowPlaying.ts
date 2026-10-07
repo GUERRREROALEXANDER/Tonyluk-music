@@ -1,0 +1,15 @@
+import { h, icon } from "../dom.js";
+import { on, store } from "../store.js";
+import { mountChain } from "../components/chain.js";
+import { mountLyricsPanel } from "./lyricsPanel.js";
+import { ACTIONS } from "../store.js";
+
+export function mountNowPlaying(onClose: () => void): HTMLElement {
+  const app = store!; const cover = h("img", { class: "now-cover", src: "assets/brand/app-icon.png", alt: "", width: 280, height: 280 }); const title = h("h2", {}, "Now Playing"); const artist = h("p", { class: "now-artist" }, "Choose a song"); const album = h("p", { class: "now-album" });
+  const tabs = h("div", { class: "now-tabs", role: "tablist" }); const body = h("div", { class: "now-body" }); const names = ["Lyrics", "Up next", "The Chain"] as const; let selected: typeof names[number] = "Lyrics";
+  const draw = (): void => { body.replaceChildren(); if (selected === "Lyrics") body.append(mountLyricsPanel()); else if (selected === "The Chain") body.append(mountChain(app.library.getActiveList()!, node => { void ACTIONS.playNode(node); }, true)); else { const list = app.library.getActiveList()!; const ul = h("div", { class: "up-next" }); let node = app.player.current?.next ?? null; if (!node && app.player.repeat === "all") node = list.head; let count = 0; while (node && count < 10) { const current = node; ul.append(h("button", { type: "button", onClick: () => { void ACTIONS.playNode(current); } }, h("img", { src: current.value.artworkUrl || "assets/brand/app-icon.png", alt: "", width: 42, height: 42 }), h("span", {}, h("strong", {}, current.value.title), h("small", {}, "via next →")))); node = current.next ?? (app.player.repeat === "all" ? list.head : null); if (node === app.player.current) break; count++; } body.append(ul); } };
+  names.forEach(name => { const button = h("button", { type: "button", role: "tab", "aria-selected": String(name === selected), onClick: () => { selected = name; tabs.querySelectorAll("button").forEach(tab => tab.setAttribute("aria-selected", String(tab.textContent === name))); draw(); } }, name); tabs.append(button); });
+  const sheet = h("aside", { class: "now-playing", "aria-label": "Now Playing" }, h("div", { class: "now-top" }, h("span", { class: "mono-label" }, "NOW PLAYING"), h("button", { type: "button", class: "icon-button now-close", "aria-label": "Close Now Playing", onClick: onClose }, icon("close"))), cover, title, artist, album, h("p", { class: "now-position" }), tabs, body);
+  const update = (): void => { const song = app.player.current?.value; title.textContent = song?.title ?? "Now Playing"; artist.textContent = song?.artist ?? "Choose a song"; album.textContent = song?.album ?? ""; cover.src = song?.artworkUrl || "assets/brand/app-icon.png"; const list = app.library.getActiveList()!; const p = app.player.current ? list.indexOf(app.player.current) + 1 : 0; sheet.querySelector(".now-position")!.textContent = `Position ${p} of ${list.size} in ${app.library.getActiveName()}`; if (selected !== "Lyrics") draw(); };
+  on("playback", update); on("library", update); draw(); update(); return sheet;
+}

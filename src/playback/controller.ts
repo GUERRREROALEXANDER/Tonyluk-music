@@ -156,6 +156,8 @@ export class PlaybackController {
 
   private handleFailure(error: unknown, engine: PlaybackEngine): void {
     if (engine !== this.activeEngine) return;
+    // The browser blocked autoplay: the song is fine, it just needs a user gesture. Stay on it, paused.
+    if (error instanceof Error && error.name === "NotAllowedError") { this.emit("state", "paused"); return; }
     const code = typeof error === "number" ? error : undefined;
     const message = engine.kind === "youtube" && code !== undefined ? mapYtError(code) : error instanceof Error ? error.message : "Playback failed";
     this.emit("error", message);
