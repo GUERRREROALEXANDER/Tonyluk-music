@@ -1,22 +1,7 @@
 import { DoublyLinkedList } from "./doublylinked.js";
 
-export interface Song {
-  id: string;
-  title: string;
-  url: string;
-  duration?: number;
-  fileName?: string;
-  fileSize?: number;
-  artist?: string;
-  source: "local" | "remote" | "youtube";
-  remoteId?: string;
-  artworkUrl?: string;
-  trackTimeMillis?: number;
-  videoId?: string;
-  license?: string;
-  attribution?: string;
-  noCors?: boolean;
-}
+export type { Song } from "./song.js";
+import type { Song } from "./song.js";
 
 /**
  * Pure helper for drag-and-drop reordering.

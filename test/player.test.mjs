@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { DoublyLinkedList } from "../dist/doublylinked.js";
-import { Player } from "../dist/player.js";
-import { Library } from "../dist/library.js";
+import { DoublyLinkedList } from "../dist/core/doublylinked.js";
+import { Player } from "../dist/core/player.js";
+import { Library } from "../dist/core/library.js";
 
 function makeList(values) {
   const l = new DoublyLinkedList();

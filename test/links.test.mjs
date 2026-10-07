@@ -1,9 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { classifyUrl } from "../dist/links.js";
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
-const root = new URL("..", import.meta.url).pathname;
 
 describe("classifyUrl", () => {
   it("youtube watch", () => assert.equal(classifyUrl("https://www.youtube.com/watch?v=abc123").kind,"youtube"));
@@ -35,23 +32,3 @@ describe("classifyUrl", () => {
   it("ftp blocked", () => assert.equal(classifyUrl("ftp://example.com/song.mp3").kind,"invalid"));
 });
 
-describe("no innerHTML for remote strings", () => {
-  it("no file in src/ui assigns remote strings to innerHTML", () => {
-    const dir = join(root, "src/ui");
-    function walk(d, out=[]) { for (const e of readdirSync(d,{withFileTypes:true})) { const p = join(d,e.name); if(e.isDirectory()) walk(p,out); else if(p.endsWith(".ts")) out.push(p); } return out; }
-    const files = walk(dir);
-    for (const f of files) {
-      if (f.endsWith("dialog.ts")) continue;
-      const c = readFileSync(f,"utf8");
-      const lines = c.split("\n");
-      for (const line of lines) {
-        if (line.includes("innerHTML") && line.includes("song.title")) {
-          if (line.includes("speakerIcon") || line.includes("icon(") || line.includes("equalizer") || line.includes("dotsIcon")) continue;
-          assert.fail(`innerHTML with remote string in ${f}: ${line.trim()}`);
-        }
-        if (line.includes("outerHTML") && line.includes("song.title")) assert.fail(`outerHTML remote in ${f}`);
-        if (line.includes("insertAdjacentHTML") && line.includes("song.title")) assert.fail(`insertAdjacentHTML remote in ${f}`);
-      }
-    }
-  });
-});

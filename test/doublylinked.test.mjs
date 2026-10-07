@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { DoublyLinkedList } from "../dist/doublylinked.js";
+import { DoublyLinkedList } from "../dist/core/doublylinked.js";
 
 /**
  * Walk forward and backward and compare results.

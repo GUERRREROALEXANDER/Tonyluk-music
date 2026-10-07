@@ -1,4 +1,4 @@
-import type { Song } from "./library.js";
+import type { Song } from "./core/song.js";
 
 export type EngineKind = "audio" | "youtube";
 export type EngineEvent = "time" | "ended" | "error" | "ready" | "state";

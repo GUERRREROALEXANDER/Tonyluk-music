@@ -1,7 +1,6 @@
 /**
- * Generic doubly linked list with manual pointer management.
- * Storage uses only nodes with prev/next; no arrays are used internally
- * except in toArray() for rendering/tests.
+ * Doubly linked list with head, tail, current, and length (size) pointers.
+ * Nodes connect in both directions: null <- A <-> B <-> C -> null.
  */
 export interface PointerStats { writes: number; }
 
@@ -14,8 +13,41 @@ export class ListNode<T> {
 export class DoublyLinkedList<T> {
   public head: ListNode<T> | null = null;
   public tail: ListNode<T> | null = null;
+  public current: ListNode<T> | null = null;
   public size = 0;
   public lastOp: PointerStats | null = null;
+
+  get length(): number { return this.size; }
+  isEmpty(): boolean { return this.size === 0; }
+  getCurrent(): T | null { return this.current === null ? null : this.current.value; }
+  setCurrent(node: ListNode<T> | null): void {
+    if (node !== null && !this.contains(node)) throw new Error("Current node does not belong to this list");
+    this.current = node;
+  }
+  moveNext(wrap = false): ListNode<T> | null {
+    if (this.current === null) { this.current = this.head; return this.current; }
+    if (this.current.next !== null) { this.current = this.current.next; return this.current; }
+    if (wrap) { this.current = this.head; return this.current; }
+    return null;
+  }
+  movePrev(wrap = false): ListNode<T> | null {
+    if (this.current === null) { this.current = this.tail; return this.current; }
+    if (this.current.prev !== null) { this.current = this.current.prev; return this.current; }
+    if (wrap) { this.current = this.tail; return this.current; }
+    return null;
+  }
+  *traverseForward(): Generator<ListNode<T>> {
+    let node = this.head;
+    while (node !== null) { yield node; node = node.next; }
+  }
+  *traverseBackward(): Generator<ListNode<T>> {
+    let node = this.tail;
+    while (node !== null) { yield node; node = node.prev; }
+  }
+  private contains(node: ListNode<T>): boolean {
+    for (const candidate of this.traverseForward()) if (candidate === node) return true;
+    return false;
+  }
 
   /** addFirst O(1) why: prepend via head pointer — preserves head.prev===null and size */
   addFirst(value: T): ListNode<T> {
@@ -56,10 +88,14 @@ export class DoublyLinkedList<T> {
   /** removeNode O(1) why: bypass via neighbours — preserves head/tail null invariants and size */
   removeNode(node: ListNode<T>): T {
     const prv = node.prev; const nxt = node.next;
+    if (this.current === node) this.current = nxt ?? prv;
     if (prv) prv.next = nxt; else this.head = nxt;
     if (nxt) nxt.prev = prv; else this.tail = prv;
-    node.prev = null; node.next = null; this.size -= 1; return node.value;
+    node.prev = null; node.next = null; this.size -= 1;
+    if (this.size === 0) this.current = null;
+    return node.value;
   }
+  delete(node: ListNode<T>): T { return this.removeNode(node); }
 
   /** removeAt O(n) why: nodeAt + removeNode — preserves links and size */
   removeAt(index: number): T {
@@ -200,14 +236,16 @@ export class DoublyLinkedList<T> {
     if (other.size === 0) { const s = { writes: 0 }; this.lastOp = s; return s; }
     if (this.size === 0) {
       this.head = other.head; this.tail = other.tail; this.size = other.size;
-      other.head = null; other.tail = null; other.size = 0;
+      this.current = other.current;
+      other.head = null; other.tail = null; other.size = 0; other.current = null;
       const s = { writes: 2 }; this.lastOp = s; return s;
     }
     // both non-empty
     if (this.tail) { this.tail.next = other.head; }
     if (other.head) { other.head.prev = this.tail; }
     this.tail = other.tail; this.size += other.size;
-    other.head = null; other.tail = null; other.size = 0;
+    if (this.current === null) this.current = other.current;
+    other.head = null; other.tail = null; other.size = 0; other.current = null;
     const s = { writes: 2 }; this.lastOp = s; return s;
   }
 
@@ -218,7 +256,8 @@ export class DoublyLinkedList<T> {
     let writes = 0;
     if (index === 0) {
       out.head = this.head; out.tail = this.tail; out.size = this.size; writes += 2;
-      this.head = null; this.tail = null; this.size = 0;
+      out.current = this.current;
+      this.head = null; this.tail = null; this.size = 0; this.current = null;
       if (out.head) { out.head.prev = null; writes++; }
       if (out.tail) { out.tail.next = null; writes++; }
       this.lastOp = { writes }; out.lastOp = { writes }; return out;
@@ -227,6 +266,7 @@ export class DoublyLinkedList<T> {
     const cut = this.nodeAt(index);
     if (cut === null) throw new RangeError(`splitAt: cut null`);
     out.head = cut; out.tail = this.tail; out.size = this.size - index; writes += 3;
+    if (this.current !== null && this.indexOf(this.current) >= index) { out.current = this.current; this.current = null; }
     const prev = cut.prev;
     if (prev) { prev.next = null; writes++; this.tail = prev; writes++; }
     cut.prev = null; writes++;

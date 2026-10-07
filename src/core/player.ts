@@ -6,7 +6,12 @@ export function prevAction(currentTime: number): PrevAction {
   return currentTime > 3 ? "restart" : "prev";
 }
 export class Player<T> {
-  public current: ListNode<T> | null = null;
+  private fallbackCurrent: ListNode<T> | null = null;
+  get current(): ListNode<T> | null { return this.playingList === null ? this.fallbackCurrent : this.playingList.current; }
+  set current(node: ListNode<T> | null) {
+    this.fallbackCurrent = node;
+    if (this.playingList !== null) this.playingList.current = node;
+  }
   public repeat: RepeatMode = "off";
   public shuffle = false;
   private playingList: DoublyLinkedList<T> | null = null;
@@ -38,8 +43,8 @@ export class Player<T> {
   setPlayingList(list: DoublyLinkedList<T> | null): void { this.playingList = list; }
   /** invariant: current stays within owner list or null */
   play(node: ListNode<T> | null, owner: DoublyLinkedList<T> | null = null): void {
-    this.current = node;
     if (owner !== null) this.playingList = owner;
+    this.current = node;
     if (this.shuffle && node !== null) this.rebuildBag();
   }
   /** invariant: moves via next pointer O(1) preserves repeat/shuffle state */
